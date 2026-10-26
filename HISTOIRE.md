@@ -42,4 +42,14 @@ Le Prologue et le Chapitre 1 sont déjà écrits en exemple ; les chapitres 2, 3
 
 Astuce : NOVA peut **se souvenir des dilemmes** (le Wi-Fi du lycée, les données vendues…). Ça donne l'impression que tes choix comptent vraiment.
 
-Et si le jeu passe en anglais pour la pub, écris directement en anglais : c'est de l'entraînement pour ton oral. 😉
+## 🇬🇧 La version anglaise
+
+Le jeu existe en français et en anglais (bouton sur l'écran titre et dans ❓).
+Le texte de base est en français ; l'anglais vient d'un dictionnaire. Cherche **`const EN = {`** (Ctrl+F), et pour chaque nouvelle fenêtre ajoute une ligne :
+
+```js
+  "Ton texte en français, exactement le même": "Your text in English",
+```
+
+Si tu oublies, rien ne plante : le texte s'affiche juste en français dans la version anglaise.
+Traduire tes propres textes, c'est un super entraînement pour ton oral. 😉
