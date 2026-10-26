@@ -292,6 +292,9 @@
   #coach{top:calc(166px + env(safe-area-inset-top))}
   /* page ouverte : les messages passent en bas pour ne pas cacher le titre */
   #toast.top{top:auto;bottom:calc(18px + env(safe-area-inset-bottom))}
+  .langs{display:flex;gap:8px;margin-top:12px;width:min(380px,100%)}
+  .langs button{flex:1;margin:0;text-align:center;background:#1f2433;color:#eef0f6;border:2px solid #3a4468;border-bottom-width:4px}
+  .langs button.on{background:#ffd23f;color:#3a2400;border-color:#0b0e15}
 </style>
 </head>
 <body>
@@ -310,6 +313,7 @@
     <button id="joinBtn" class="big" style="text-align:center">▶ JOUER</button>
   </div>
   <div class="squad mini"><div class="sqt">🔜 SQUAD UPDATE</div><span>Bientôt : joue avec tes potes !</span></div>
+  <div class="langs"><button data-l="fr" onclick="setLang('fr')">🇫🇷 Français</button><button data-l="en" onclick="setLang('en')">🇬🇧 English</button></div>
   <span id="modeBadge" class="hidden"></span>
 </div>
 
@@ -487,7 +491,610 @@ const fmt = n => { n=Math.floor(n); if(n>=1e9) return (n/1e9).toFixed(1)+'G'; if
 const fmtD = n => (Math.round(n*10)/10).toString();
 const hms = ms => { const s=Math.max(0,Math.floor(ms/1000)); return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(x=>String(x).padStart(2,'0')).join(':'); };
 const ms2 = ms => { const s=Math.max(0,Math.ceil(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-const setHTML = (el, html) => { if (el._h !== html) { el.innerHTML = html; el._h = html; } };
+/* ================= LANGUE (FR / EN) =================
+   Le jeu est écrit en français. En anglais, chaque texte affiché passe par trText()/tr(), qui le traduit
+   grâce au dictionnaire EN ci-dessous (texte français exact -> anglais). Pour un nouveau texte :
+   ajoute une ligne "texte français": "English text". {n} = un nombre. */
+let LANG = (() => { try { return localStorage.getItem('pcempire_lang') || ((navigator.language||'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en'); } catch(e){ return 'fr'; } })();
+const EN = {
+  "Fabrique des PC. Bâtis ton empire.": "Build PCs. Grow your empire.",
+  "Choisis ta voie : 😇 🧭 😈": "Choose your side: 😇 🧭 😈",
+  "Nom de ta start-up": "Your start-up's name",
+  "▶ JOUER": "▶ PLAY",
+  "Bientôt : joue avec tes potes !": "Coming soon: play with your friends!",
+  "Bientôt : monte ta start-up avec tes potes !": "Coming soon: build your start-up with your friends!",
+  "Une start-up à plusieurs, le classement de la classe et des défis entre squads.": "A start-up you run together, a class leaderboard and squad vs squad challenges.",
+  "CODER": "CODE",
+  "$ / tap": "$ / tap",
+  "Boutique": "Shop",
+  "Atelier": "Workshop",
+  "Empire": "Empire",
+  "Market": "Market",
+  "Top": "Top",
+  "⭐ NIV.": "⭐ LVL",
+  "NIV. 1": "LVL 1",
+  "🛒 Boutique": "🛒 Shop",
+  "🔧 Atelier": "🔧 Workshop",
+  "🎁 Loot": "🎁 Loot",
+  "🏪 Market": "🏪 Market",
+  "🏆 Top": "🏆 Top",
+  "🎯 Objectifs": "🎯 Goals",
+  "❓ Comment jouer": "❓ How to play",
+  "🧭 Empire": "🧭 Empire",
+  "Recentrer la vue": "Reset view",
+  "Passer": "Skip",
+  "Fermer": "Close",
+  "Annuler": "Cancel",
+  "Acheter": "Buy",
+  "Vendre": "Sell",
+  "Retirer": "Remove",
+  "OK": "OK",
+  "Suivant ▸": "Next ▸",
+  "Bienvenue": "Welcome",
+  "Garage": "Garage",
+  "Local": "Office",
+  "Open space": "Open space",
+  "Étage entier": "Whole floor",
+  "Tour": "Tower",
+  "Siège mondial": "World HQ",
+  "Commun": "Common",
+  "Rare": "Rare",
+  "Épique": "Epic",
+  "Légendaire": "Legendary",
+  "Processeur": "CPU",
+  "Carte graphique": "Graphics card",
+  "RAM": "RAM",
+  "Écran": "Screen",
+  "Grille-Pain": "Toaster",
+  "Turbo": "Turbo",
+  "Quantique": "Quantum",
+  "Dieu Grec": "Greek God",
+  "Patate": "Potato",
+  "Fusée": "Rocket",
+  "Galactique": "Galactic",
+  "Divine": "Divine",
+  "Cacahuète": "Peanut",
+  "Rapide": "Fast",
+  "Ultra": "Ultra",
+  "Infinie": "Infinite",
+  "Pixel Cassé": "Broken Pixel",
+  "Full HD": "Full HD",
+  "Incurvé 4K": "Curved 4K",
+  "Cinéma 8K": "Cinema 8K",
+  "Boîtier basique": "Basic case",
+  "Boîtier gamer": "Gamer case",
+  "Tour RGB": "RGB tower",
+  "Serveur doré": "Golden server",
+  "Ventirad basique": "Basic cooler",
+  "Ventirad tour": "Tower cooler",
+  "Double ventilo": "Dual fan",
+  "Watercooling": "Watercooling",
+  "Watercooling XL": "Watercooling XL",
+  "Azote liquide": "Liquid nitrogen",
+  "🔵 Pièces de gamme Rare en boutique": "🔵 Rare-tier parts in the shop",
+  "🟣 Pièces de gamme Épique en boutique": "🟣 Epic-tier parts in the shop",
+  "🟠 Pièces de gamme Légendaire en boutique": "🟠 Legendary-tier parts in the shop",
+  "Un grand étage pour ton empire": "A whole floor for your empire",
+  "Le sommet : un siège mondial": "The top: a world HQ",
+  "🧩 Pièces": "🧩 Parts",
+  "👥 Équipe": "👥 Team",
+  "🏢 Local": "🏢 Office",
+  "puissance · niv. max": "power · max lvl",
+  "niv.": "lvl ",
+  "Souris gaming niv.": "Gaming mouse lvl ",
+  "+1$ de base par tap": "+1$ base per tap",
+  "Les prix montent de 15 % par PC installé (électricité, place…).": "Prices go up 15% for each PC you own (power, space…).",
+  "Agrandis ton local 🏢 pour débloquer une meilleure gamme.": "Expand your office 🏢 to unlock a better tier.",
+  "Agrandis ton local": "Expand your office",
+  "Embauche et forme ton équipe : chaque niveau donne un bonus permanent.": "Hire and train your team: every level gives a permanent bonus.",
+  "Poste à pourvoir": "Position open",
+  "✍️ Embaucher": "✍️ Hire",
+  "⬆ Former": "⬆ Train",
+  "MAX": "MAX",
+  "Développeur": "Developer",
+  "Technicien": "Technician",
+  "Marketeuse": "Marketer",
+  "Comptable": "Accountant",
+  "Chaque tap ×": "Each tap ×",
+  "Refroidissement +": "Cooling +",
+  "Revenus +": "Income +",
+  "Taxe −": "Tax −",
+  "% · absence max": "% · max away time",
+  "rejoint ta start-up !": "joins your start-up!",
+  "passe niv.": "reaches lvl ",
+  "Je code un mod gratuit pour la communauté, ça te va ?": "I'm coding a free mod for the community, OK with you?",
+  "Je code, tu paies. Tout le monde est content.": "I code, you pay. Everyone's happy.",
+  "J’ai… emprunté le code d’un concurrent. Chut.": "I… borrowed a competitor's code. Shh.",
+  "J’ai posé des panneaux solaires sur le toit ☀️": "I put solar panels on the roof ☀️",
+  "Les PC tournent. Ne touche à rien.": "The PCs are running. Don't touch anything.",
+  "J’ai débranché les alarmes de chaleur. Ça va plus vite !": "I unplugged the heat alarms. It's faster now!",
+  "Les joueurs nous adorent, regarde les avis !": "Players love us, look at the reviews!",
+  "Une pub, un slogan, des clients. Simple.": "An ad, a slogan, customers. Simple.",
+  "J’ai acheté 10 000 faux avis 5 étoiles 😏": "I bought 10,000 fake 5-star reviews 😏",
+  "Tout est déclaré, au centime près.": "Everything is declared, to the last cent.",
+  "Les comptes sont justes. Enfin, à peu près.": "The books are right. Well, more or less.",
+  "Tu connais les paradis fiscaux ?": "Ever heard of tax havens?",
+  "emplacements pour tes PC ·": "slots for your PCs ·",
+  "utilisés": "used",
+  "Prochain :": "Next:",
+  "emplacements (+": "slots (+",
+  "🏗️ Agrandir ·": "🏗️ Expand ·",
+  "🏆 Siège mondial atteint, bravo !": "🏆 World HQ reached, well done!",
+  "Acheté :": "Bought:",
+  "Pas assez de cash 💸": "Not enough cash 💸",
+  "🖥️ Mes PC": "🖥️ My PCs",
+  "🔧 Monter": "🔧 Build",
+  "📦 Stock (": "📦 Stock (",
+  "♻️ Fusion": "♻️ Fusion",
+  "Aucun PC pour l’instant : va dans 🔧 Monter pour assembler le premier.": "No PC yet: go to 🔧 Build to put your first one together.",
+  "🔥 surchauffe": "🔥 overheating",
+  "⬆ Améliorer": "⬆ Upgrade",
+  "Emplacements :": "Slots:",
+  ". Local plein ? Améliore tes PC, ou agrandis dans 🛒 Boutique › Local.": ". Office full? Upgrade your PCs, or expand in 🛒 Shop › Office.",
+  "＋ Acheter": "＋ Buy",
+  "⚡ Puissance :": "⚡ Power:",
+  "⚡ Puissance": "⚡ Power",
+  "· local plein : agrandis-le (🏢) ou améliore tes PC": "· office full: expand it (🏢) or upgrade your PCs",
+  "Il manque :": "Missing:",
+  "🔧 ASSEMBLER LE PC": "🔧 BUILD THE PC",
+  "Plus de place": "No more room",
+  "Touche une pièce pour changer celle utilisée.": "Tap a part to swap the one used.",
+  "Touche une pièce pour l’améliorer, la vendre ou la recycler.": "Tap a part to upgrade, sell or recycle it.",
+  "Aucune pièce en stock. Achète-en à la boutique ou ouvre une box.": "No parts in stock. Buy some in the shop or open a box.",
+  "Fusion verrouillée": "Fusion locked",
+  "3 pièces identiques (même type, même rareté) → 1 pièce de rareté supérieure, niveau 0. Les moins améliorées sont utilisées en premier.": "3 identical parts (same type, same tier) → 1 part of the next tier, level 0. The least upgraded ones are used first.",
+  "Aucune pièce à fusionner pour l’instant.": "Nothing to fuse yet.",
+  "Plus de place ! Agrandis ton bureau 🏢": "No more room! Expand your office 🏢",
+  "Il te manque :": "You're missing:",
+  "PC assemblé ! 🖥️": "PC built! 🖥️",
+  "PC démonté 🔩": "PC taken apart 🔩",
+  "♻️ Fusion :": "♻️ Fusion:",
+  "◀ Mes PC": "◀ My PCs",
+  "Rapporte": "Earns",
+  "🌡️ Chaleur": "🌡️ Heat",
+  "/ refroidissement": "/ cooling",
+  "(minage ⛏️)": "(mining ⛏️)",
+  "🔥 Surchauffe :": "🔥 Overheating:",
+  "% de rendement !": "% efficiency!",
+  "Ce PC surchauffe.": "This PC is overheating.",
+  "Ce PC arrive à sa limite de chaleur.": "This PC is reaching its heat limit.",
+  "Améliore son": "Upgrade its",
+  "refroidissement ❄️": "cooling ❄️",
+  "(en bas) : sinon, améliorer ses pièces ne lui rapportera presque rien.": "(below): otherwise upgrading its parts will earn almost nothing.",
+  "(en bas) : sinon, améliorer ses pièces ne lui rapportera rien.": "(below): otherwise upgrading its parts will earn nothing.",
+  "Pièces": "Parts",
+  "Matériel": "Hardware",
+  "Revenus ×": "Income ×",
+  "Capacité": "Capacity",
+  "🔩 Démonter ce PC": "🔩 Take this PC apart",
+  "Boîtier :": "Case:",
+  "Refroidissement :": "Cooling:",
+  "Niveau maximum !": "Max level!",
+  "Niveau max atteint": "Max level reached",
+  "Niveau max 🏆": "Max level 🏆",
+  "🏪 Vendre sur le Market": "🏪 Sell on the Market",
+  "♻️ Revendre au système ·": "♻️ Sell to the system ·",
+  "Cette pièce est installée dans le PC #": "This part is installed in PC #",
+  "Mettre en vente": "Put up for sale",
+  "🏪 Mettre en vente": "🏪 Put up for sale",
+  "Cours du marché :": "Market price:",
+  "Taxe du Sénat :": "Senate tax:",
+  "% sur la vente": "% on the sale",
+  "Prix invalide": "Invalid price",
+  "Mis en vente sur le Market 🏪": "Listed on the Market 🏪",
+  "♻️ Recyclé : +": "♻️ Recycled: +",
+  "⬆️ Améliorer": "⬆️ Upgrade",
+  "Box du jour": "Daily box",
+  "· 3 pièces · Commun 60% · Rare 25% · Épique 12% · Légendaire 3%": "· 3 parts · Common 60% · Rare 25% · Epic 12% · Legendary 3%",
+  "· 4 pièces · Commun 30% · Rare 40% · Épique 22% · Légendaire 8%": "· 4 parts · Common 30% · Rare 40% · Epic 22% · Legendary 8%",
+  "🎁 OUVRIR LA BOX GRATUITE": "🎁 OPEN THE FREE BOX",
+  "Prochaine box gratuite dans": "Next free box in",
+  "Ouverture...": "Opening...",
+  "💎 Box Premium": "💎 Premium box",
+  "💎 Acheter ·": "💎 Buy ·",
+  "Tu as obtenu :": "You got:",
+  "✨ LÉGENDAIRE !! ✨": "✨ LEGENDARY!! ✨",
+  "Market verrouillé": "Market locked",
+  "Joue pour gagner de l’expérience ⭐": "Play to earn experience ⭐",
+  "Taxe :": "Tax:",
+  "par vente (vote du Sénat dans 🏆 Top). Pour vendre : 🔧 Atelier › Stock.": "per sale (voted by the Senate in 🏆 Top). To sell: 🔧 Workshop › Stock.",
+  "Aucune offre pour le moment.": "No offers right now.",
+  "Trop tard, déjà vendu !": "Too late, already sold!",
+  "vendu (+": "sold (+",
+  "💰 Vente réussie (+": "💰 Sale complete (+",
+  "🔒 Market :": "🔒 Market:",
+  "🏛️ Sénat": "🏛️ Senate",
+  "📊 Stats": "📊 Stats",
+  "💬 Chat": "💬 Chat",
+  "Personne pour l’instant...": "Nobody yet...",
+  "🏛️ Caisse du Sénat :": "🏛️ Senate treasury:",
+  "Les taxes du Market remplissent la caisse. À chaque palier,": "Market taxes fill the treasury. At each milestone,",
+  "tous les joueurs": "all players",
+  "gagnent +3% de revenus (actuellement +": "get +3% income (currently +",
+  "Prochain palier :": "Next milestone:",
+  "Tous les paliers atteints !": "All milestones reached!",
+  "Vote le taux de taxe (actuel :": "Vote on the tax rate (current:",
+  ", effectif pour toi": ", yours after bonuses",
+  "). Une taxe élevée remplit la caisse (bonus pour tous) mais les vendeurs gagnent moins.": "). A high tax fills the treasury (bonus for everyone) but sellers earn less.",
+  "Allègement fiscal": "Tax cut",
+  "Le peuple respire": "The people can breathe",
+  "Taxe raisonnable": "Fair tax",
+  "Le Sénat s’offre un café": "The Senate buys itself a coffee",
+  "Taxe 70%": "70% tax",
+  "Le Sénat veut sa piscine": "The Senate wants a pool",
+  "vote(s)": "vote(s)",
+  "📊 Toute la classe": "📊 The whole class",
+  "Joueurs inscrits": "Registered players",
+  "En ligne maintenant": "Online now",
+  "Sont revenus un autre jour": "Came back another day",
+  "PC assemblés (total)": "PCs built (total)",
+  "Échanges sur le Market": "Market trades",
+  "Ont aimé le jeu": "Liked the game",
+  "pas encore d’avis": "no reviews yet",
+  "Fortune moyenne": "Average fortune",
+  "👤 Toi": "👤 You",
+  "Temps de jeu": "Play time",
+  "Jours joués": "Days played",
+  "(série": "(streak",
+  "Taps": "Taps",
+  "PC assemblés": "PCs built",
+  "Pièces améliorées": "Parts upgraded",
+  "Pièces vendues / achetées au Market": "Parts sold / bought on the Market",
+  "Fusions": "Fusions",
+  "Boxes ouvertes": "Boxes opened",
+  "Tu kiffes le jeu ?": "Enjoying the game?",
+  "Merci pour ton avis ! 🙏": "Thanks for your feedback! 🙏",
+  "Missions du jour": "Daily missions",
+  "(nouvelles chaque jour)": "(new every day)",
+  "autres objectifs à découvrir": "more goals to discover",
+  "Objectifs": "Goals",
+  "🎯 Objectif :": "🎯 Goal:",
+  "✅ Mission accomplie : +": "✅ Mission complete: +",
+  "🏆 Tous les objectifs accomplis !": "🏆 All goals completed!",
+  "Assemble ton premier PC": "Build your first PC",
+  "Ouvre ta première box": "Open your first box",
+  "Améliore une pièce": "Upgrade a part",
+  "Fais tourner 2 PC en même temps": "Run 2 PCs at the same time",
+  "Atteins 10$/s": "Reach 10$/s",
+  "Passe au bureau « Local »": "Move up to the « Office »",
+  "Vends une pièce sur le Market": "Sell a part on the Market",
+  "Fais ta première fusion": "Do your first fusion",
+  "Embauche ton premier employé": "Hire your first employee",
+  "Améliore le refroidissement d’un PC": "Upgrade a PC's cooling",
+  "Vote au Sénat": "Vote in the Senate",
+  "Monte un PC avec une pièce Épique": "Build a PC with an Epic part",
+  "Atteins 50$/s": "Reach 50$/s",
+  "Passe à l’Open space": "Move up to the Open space",
+  "Atteins 200$/s": "Reach 200$/s",
+  "Possède une pièce Légendaire": "Own a Legendary part",
+  "Atteins 1000$/s": "Reach 1000$/s",
+  "Construis le Siège mondial": "Build the World HQ",
+  "Répartis ta puissance sur 2 jobs": "Split your power across 2 jobs",
+  "Prends une décision (dilemme)": "Make a decision (dilemma)",
+  "Débloque un talent": "Unlock a talent",
+  "Choisis ton camp : 😇 ou 😈": "Pick your side: 😇 or 😈",
+  "Entre en Bourse (IPO)": "Go public (IPO)",
+  "Un PC gagne de l’argent tout seul, même quand tu ne tapes pas.": "A PC earns money on its own, even when you're not tapping.",
+  "Des pièces gratuites, et parfois des rares (niveau 3).": "Free parts, sometimes rare ones (level 3).",
+  "Plus de puissance = plus d’argent, sans prendre de place. Atelier › Mes PC.": "More power = more money, without taking up space. Workshop › My PCs.",
+  "Deux PC, c’est deux fois plus d’argent par seconde.": "Two PCs means twice the money per second.",
+  "Plus de place pour tes PC, et des pièces de gamme Rare.": "More room for your PCs, and Rare-tier parts.",
+  "Tape {n} fois sur CODER": "Tap CODE {n} times",
+  "Améliore {n} pièces": "Upgrade {n} parts",
+  "Assemble un PC": "Build a PC",
+  "Ouvre une box": "Open a box",
+  "Achète {n} pièces à la boutique": "Buy {n} parts in the shop",
+  "Vends {n} pièce(s) sur le Market": "Sell {n} part(s) on the Market",
+  "Achète {n} pièce(s) au Market": "Buy {n} part(s) on the Market",
+  "Fais une fusion": "Do a fusion",
+  "Pendant ton absence : +": "While you were away: +",
+  "🔥 Série de": "🔥 Streak of",
+  "jour(s) ! Bonus +": "day(s)! Bonus +",
+  "Bienvenue patron ! 👋 Tape sur le gros bouton vert": "Welcome, boss! 👋 Tap the big green",
+  "pour gagner tes premiers $.": "button to earn your first $.",
+  "Bien joué ! Avec ces $, ouvre la": "Nice! With that $, open the",
+  "pour acheter du matériel.": "to buy some hardware.",
+  "Un PC a besoin de": "A PC needs",
+  "4 pièces": "4 parts",
+  ": processeur, carte graphique, RAM et écran. Achètes-en": ": a CPU, a graphics card, RAM and a screen. Buy",
+  "une de chaque": "one of each",
+  "Parfait ! Va à l’": "Perfect! Go to the",
+  "pour les assembler.": "to put them together.",
+  "Appuie sur": "Press",
+  "Ton premier PC est dans ton local 🎉 Il rapporte du $": "Your first PC is in your office 🎉 It earns $",
+  "tout seul": "on its own",
+  "! Touche-le pour améliorer ses pièces, son boîtier et son refroidissement.": "! Tap it to upgrade its parts, case and cooling.",
+  "Tu sais l’essentiel ! Suis tes": "You know the basics! Follow your",
+  "objectifs": "goals",
+  "🎯 en haut : ils te font gagner de l’expérience ⭐. À chaque niveau, je te débloque une nouvelle fonction, jusqu’à ton": "🎯 at the top: they earn you experience ⭐. Each level unlocks a new feature, all the way to your",
+  "où tu choisiras ton camp 😇 ou 😈. Le ❓ te rappelle les règles.": "where you'll pick your side 😇 or 😈. The ❓ button reminds you of the rules.",
+  "C’est parti !": "Let's go!",
+  "TUTO": "TUTORIAL",
+  "🔊 Son activé (touche pour le couper)": "🔊 Sound on (tap to mute)",
+  "🔇 Son coupé (touche pour l’activer)": "🔇 Sound off (tap to turn on)",
+  "🎯 But du jeu": "🎯 Goal of the game",
+  "Construis la plus grosse start-up gaming : assemble des PC, améliore-les et fais-les tourner pour gagner un max de $.": "Build the biggest gaming start-up: put PCs together, upgrade them and keep them running to earn as much $ as you can.",
+  "🔧 Un PC": "🔧 A PC",
+  "= 1 processeur + 1 carte graphique + 1 RAM + 1 écran. Sa": "= 1 CPU + 1 graphics card + 1 RAM + 1 screen. Its",
+  "puissance ⚡": "power ⚡",
+  "donne ses $/s.": "gives its $/s.",
+  "Il a aussi un": "It also has a",
+  "boîtier": "case",
+  "(bonus de revenus) et un": "(income bonus) and",
+  "refroidissement": "cooling",
+  ": si le PC chauffe trop (🔥), il rapporte moins.": ": if the PC gets too hot (🔥), it earns less.",
+  ": ouvre Atelier › Mes PC, puis monte ses pièces de niveau (plus de puissance).": ": open Workshop › My PCs, then level up its parts (more power).",
+  ": 3 pièces identiques → 1 pièce plus rare (Commun → Rare → Épique → Légendaire).": ": 3 identical parts → 1 rarer part (Common → Rare → Epic → Legendary).",
+  ": une box gratuite par jour, et des box premium à acheter.": ": one free box a day, plus premium boxes to buy.",
+  ": achète et vends des pièces aux autres joueurs. Les prix bougent et des événements (📱📈🔌…) les font varier.": ": buy and sell parts with other players. Prices move and events (📱📈🔌…) shake them up.",
+  ": tout le monde vote le taux de taxe du Market. Les taxes remplissent la caisse du Sénat, qui donne des bonus de revenus à": ": everyone votes on the Market tax rate. Taxes fill the Senate treasury, which gives an income bonus to",
+  "tous": "all",
+  "les joueurs.": "players.",
+  ": embauche un développeur, un technicien, un marketeur et un comptable.": ": hire a developer, a technician, a marketer and an accountant.",
+  ": agrandis-le pour plus d’emplacements et de nouvelles fonctions.": ": expand it for more slots and better parts.",
+  "🎯 Objectifs & missions": "🎯 Goals & missions",
+  ": ils te guident et rapportent des $. Reviens chaque jour : box, nouvelles missions et série de jours bonus !": ": they guide you and earn $. Come back every day: box, new missions and a daily streak bonus!",
+  "(niveau 8) : répartis la puissance de tes PC entre 4 jobs. 🎮 Serveurs et 🤖 IA te rendent": "(level 8): split your PCs' power across 4 jobs. 🎮 Servers and 🤖 AI make you",
+  "éthique 😇": "ethical 😇",
+  "; ⛏️ Minage de PixelCoin (monnaie": "; ⛏️ PixelCoin mining (a",
+  "fictive": "fictional",
+  "du jeu) et 🕵️ Revente de données rapportent plus mais te rendent": "in-game currency) and 🕵️ Data selling pay more but make you a",
+  "requin 😈": "shark 😈",
+  "— avec des risques d’amende.": "— with a risk of fines.",
+  "Tes points de compétence débloquent l’arbre 😇 ou 😈 ; le dernier talent de chaque arbre exige d’être dans ce camp.": "Your skill points unlock the 😇 or 😈 tree; the last talent of each tree requires being on that side.",
+  "Le camp majoritaire de la classe fait voter des lois au": "The side most of the class is on gets laws voted in the",
+  "Sénat": "Senate",
+  "qui changent le jeu pour tout le monde.": "that change the game for everyone.",
+  "Taper sur CODER remplit le": "Tapping CODE fills up the",
+  "⚡ Rush": "⚡ Rush",
+  ": +50% de puissance.": ": +50% power.",
+  "📈 Entrée en Bourse": "📈 Going public",
+  "(à l’« Étage entier ») : tu recommences de zéro, mais tu gagnes des actions qui boostent tes revenus pour toujours, et tu peux changer de camp.": "(from the « Whole floor »): you start over, but you get shares that boost your income forever, and you can switch sides.",
+  "🔁 Revoir le tutoriel": "🔁 Replay the tutorial",
+  "⭐ Niveau": "⭐ Level",
+  "Nouveau :": "New:",
+  "Débloqué au niveau": "Unlocked at level",
+  "Améliorations": "Upgrades",
+  "Box premium": "Premium box",
+  "Missions": "Missions",
+  "Équipe": "Team",
+  "Boîtiers": "Cases",
+  "Empire & voies": "Empire & sides",
+  "Dilemmes": "Dilemmas",
+  "Page Crypto": "Crypto page",
+  "Fusion": "Fusion",
+  "Événements": "Events",
+  "Entrée en Bourse": "Going public",
+  "Tes PC peuvent monter de niveau : Atelier › 🖥️ Mes PC. Surveille la chaleur 🔥 et améliore le refroidissement ❄️ en même temps.": "Your PCs can level up: Workshop › 🖥️ My PCs. Watch the heat 🔥 and upgrade cooling ❄️ at the same time.",
+  "Chaque jour, une box gratuite avec 3 pièces. Le bouton 🎁 est à droite de l’écran.": "Every day, a free box with 3 parts. The 🎁 button is on the right of the screen.",
+  "3 petites missions par jour pour gagner des $ en plus. Elles sont dans 🎯 Objectifs.": "3 small missions a day to earn extra $. They're in 🎯 Goals.",
+  "Tu peux embaucher ton premier employé (Boutique › Équipe). Chacun donne un bonus pour toujours.": "You can hire your first employee (Shop › Team). Each one gives a bonus forever.",
+  "Un meilleur boîtier multiplie tout ce que rapporte un PC. Idéal quand ton local est plein.": "A better case multiplies everything a PC earns. Perfect when your office is full.",
+  "Achète et vends des pièces aux autres. Les prix bougent : vends quand c’est cher.": "Buy and sell parts with others. Prices move: sell when they're high.",
+  "Décide à quoi sert ta puissance de calcul. Tes choix feront de toi une start-up 😇, 🧭 ou 😈.": "Decide what your computing power is for. Your choices will make you a 😇, 🧭 or 😈 start-up.",
+  "De temps en temps, je te demanderai de choisir. Pas de bonne réponse… seulement des conséquences.": "Now and then, I'll ask you to choose. No right answer… only consequences.",
+  "Le minage produit maintenant des PixelCoins (monnaie fictive). À toi de choisir quand les revendre.": "Mining now produces PixelCoins (a fictional currency). You choose when to sell them.",
+  "3 pièces identiques donnent 1 pièce de la gamme au-dessus (Atelier › Fusion).": "3 identical parts give 1 part of the next tier (Workshop › Fusion).",
+  "Vote la taxe du Market (🏆 Top › Sénat). La caisse du Sénat donne des bonus à tout le monde.": "Vote on the Market tax (🏆 Top › Senate). The Senate treasury gives everyone a bonus.",
+  "Hype TikTok, pénurie de GPU, panne de courant… Le monde bouge, adapte-toi.": "TikTok hype, GPU shortage, power outage… The world changes, adapt.",
+  "Des box payantes avec de bien meilleures chances de pièces rares.": "Paid boxes with much better odds of rare parts.",
+  "Recommence de zéro avec un bonus pour toujours… et essaie une autre voie (à partir de l’Étage entier).": "Start over with a bonus forever… and try another side (from the Whole floor).",
+  "Hype TikTok": "TikTok hype",
+  "Revenus ×1.8": "Income ×1.8",
+  "Panne de courant": "Power outage",
+  "Revenus ×0.5": "Income ×0.5",
+  "Pénurie de GPU": "GPU shortage",
+  "GPU ×2 au Market": "GPUs ×2 on the Market",
+  "Surplus de RAM": "RAM surplus",
+  "RAM −50% au Market": "RAM −50% on the Market",
+  "Boom crypto": "Crypto boom",
+  "CPU & GPU ×1.7 au Market": "CPUs & GPUs ×1.7 on the Market",
+  "Empire verrouillé": "Empire locked",
+  "Tu y choisiras ta voie : 😇 éthique, 🧭 équilibriste ou 😈 requin": "There you'll choose your side: 😇 ethical, 🧭 balancer or 😈 shark",
+  "😇 Start-up éthique": "😇 Ethical start-up",
+  "🧭 Équilibriste": "🧭 Balancer",
+  "😈 Start-up requin": "😈 Shark start-up",
+  "réputation": "reputation",
+  "tes jobs, tes choix et tes talents la font bouger": "your jobs, choices and talents move it",
+  "⚙️ Jobs": "⚙️ Jobs",
+  "⛏️ Crypto": "⛏️ Crypto",
+  "🌳 Talents": "🌳 Talents",
+  "🏛️ Monde": "🏛️ World",
+  "⚙️ Jobs de calcul": "⚙️ Computing jobs",
+  "⚡ à répartir": "⚡ to share out",
+  "· ⚡ Rush ×1,5": "· ⚡ Rush ×1.5",
+  "Serveurs de jeu": "Game servers",
+  "Stable · 😇 lentement": "Steady · 😇 slowly",
+  "IA & recherche": "AI & research",
+  "Un peu moins rentable · 😇 vite": "A bit less profitable · 😇 fast",
+  "Minage de PixelCoin": "PixelCoin mining",
+  "Suit le cours du PXC · chauffe +50% · 😈": "Follows the PXC price · +50% heat · 😈",
+  "Revente de données": "Data selling",
+  "Très rentable · risque d’amende · 😈 vite": "Very profitable · risk of fines · 😈 fast",
+  "· cours PXC ×": "· PXC price ×",
+  "· 🚓 coupé": "· 🚓 shut down",
+  "% de ta puissance est au repos et ne rapporte rien.": "% of your power is idle and earns nothing.",
+  "Le PixelCoin (PXC) est une monnaie": "PixelCoin (PXC) is a",
+  ", qui n’existe que dans le jeu. Tape sur CODER pour remplir le ⚡ Rush (+50% de puissance).": " currency that only exists in the game. Tap CODE to fill up the ⚡ Rush (+50% power).",
+  "Toute ta puissance est déjà répartie : baisse un autre job": "All your power is already assigned: lower another job",
+  "point(s) à dépenser": "point(s) to spend",
+  "😇 Éthique": "😇 Ethical",
+  "😈 Requin": "😈 Shark",
+  "(reste entre −25 et +25)": "(stay between −25 and +25)",
+  "Énergie verte": "Green energy",
+  "Refroidissement +25%": "Cooling +25%",
+  "Open source": "Open source",
+  "Serveurs & IA +25%": "Servers & AI +25%",
+  "Fans fidèles": "Loyal fans",
+  "Missions ×1,5 · absence max +4 h": "Missions ×1.5 · max away time +4 h",
+  "Subventions": "Subsidies",
+  "Taxe du Market −50% · paliers du Sénat +5%": "Market tax −50% · Senate milestones +5%",
+  "Licorne verte": "Green unicorn",
+  "Serveurs & IA ×1,5 · immunisé contre les pannes": "Servers & AI ×1.5 · immune to outages",
+  "Overclock sauvage": "Wild overclock",
+  "Taps ×2 · chaleur +10%": "Taps ×2 · heat +10%",
+  "Ferme de minage": "Mining farm",
+  "Minage +40%": "Mining +40%",
+  "Pièces contrefaites": "Counterfeit parts",
+  "Boutique −30%": "Shop −30%",
+  "Lobbying": "Lobbying",
+  "Amendes −50% · Rush max 60 s": "Fines −50% · Rush max 60 s",
+  "Monopole": "Monopoly",
+  "Données ×1,5 · krachs du PXC divisés par 2": "Data ×1.5 · PXC crashes halved",
+  "Diplomate": "Diplomat",
+  "Taxe du Market −30% · les acheteurs acceptent jusqu’à 1,3× le cours": "Market tax −30% · buyers accept up to 1.3× the price",
+  "Portefeuille diversifié": "Diversified portfolio",
+  "+4% de revenus par job utilisé (jusqu’à +16%)": "+4% income per job used (up to +16%)",
+  "Arbitre": "Referee",
+  "Les lois du Sénat ne te touchent pas · dilemmes ×2 en $": "Senate laws don't affect you · dilemmas ×2 in $",
+  "· voie": "· side",
+  "requise": "required",
+  "pt": "pt",
+  "Points : 1 par niveau de local, 1 tous les 3 objectifs, 2 par entrée en Bourse. Les talents 😇 et 😈 font pencher ta réputation vers leur camp ; les talents 🧭 ne la bougent pas.": "Points: 1 per office level, 1 every 3 goals, 2 per IPO. 😇 and 😈 talents push your reputation toward their side; 🧭 talents don't move it.",
+  "Débloque d’abord le talent précédent": "Unlock the previous talent first",
+  "Réservé à la voie": "Only for the side",
+  "Pas assez de points de compétence": "Not enough skill points",
+  "✨ Talent :": "✨ Talent:",
+  "🏛️ Le monde": "🏛️ The world",
+  "🏛️ Loi en vigueur :": "🏛️ Law in force:",
+  "Opinion de la classe :": "Class opinion:",
+  "(toi + 6 rivaux simulés)": "(you + 6 simulated rivals)",
+  "(moyenne des joueurs)": "(players' average)",
+  ". Au-dessus de +25, le Sénat vote la Loi Climat ; en dessous de −25, la Régulation d’urgence.": ". Above +25, the Senate passes the Climate Law; below −25, Emergency Regulation.",
+  "Loi Climat": "Climate Law",
+  "Minage ×0,5 · Serveurs & IA ×1,2": "Mining ×0.5 · Servers & AI ×1.2",
+  "Marché libre": "Free market",
+  "Aucune règle spéciale": "No special rules",
+  "Régulation d’urgence": "Emergency Regulation",
+  "PixelCoin ×0,6 · amendes ×2 · taxe du Market +20 points": "PixelCoin ×0.6 · fines ×2 · Market tax +20 points",
+  "🏛️ Le Sénat vote :": "🏛️ The Senate votes:",
+  "📖 Histoire de NOVA": "📖 NOVA's story",
+  "Actions :": "Shares:",
+  "(revenus ×": "(income ×",
+  "pour toujours) ·": "forever) ·",
+  "entrée(s) en Bourse": "IPO(s)",
+  "Disponible à partir de l’« Étage entier ».": "Available from the « Whole floor ».",
+  "Tu repars de zéro, mais tu gagnes +": "You start over, but you get +",
+  "action(s) et tu peux changer de camp.": "share(s) and can switch sides.",
+  "📈 Entrer en Bourse": "📈 Go public",
+  "action(s)": "share(s)",
+  "📈 Entrer en Bourse ?": "📈 Go public?",
+  "Tu": "You",
+  "repars de zéro": "start over",
+  ": argent, PC, pièces, équipe, local, talents et réputation.": ": money, PCs, parts, team, office, talents and reputation.",
+  "Tu gardes tes objectifs et tes stats, et tu gagnes": "You keep your goals and stats, and you get",
+  ": revenus ×": ": income ×",
+  "pour toujours, plus 2 points de talent à chaque partie.": "forever, plus 2 talent points each run.",
+  "📈 Oui, on entre en Bourse": "📈 Yes, let's go public",
+  "Pas encore": "Not yet",
+  "📈 Entrée en Bourse ! +": "📈 You went public! +",
+  "action(s) · revenus ×": "share(s) · income ×",
+  "pour toujours": "forever",
+  "🚨 Scandale : fuite de données ! Amende −": "🚨 Scandal: data leak! Fine −",
+  "🚓 Descente de police : ton minage est coupé pendant 60 s": "🚓 Police raid: your mining is shut down for 60 s",
+  "😇 Ta start-up est maintenant ÉTHIQUE": "😇 Your start-up is now ETHICAL",
+  "😈 Ta start-up est maintenant un REQUIN": "😈 Your start-up is now a SHARK",
+  "🧭 Retour à l’équilibre : tu es Équilibriste": "🧭 Back to balance: you're a Balancer",
+  "Page Crypto verrouillée": "Crypto page locked",
+  "PixelCoin (PXC)": "PixelCoin (PXC)",
+  "Monnaie fictive : elle n’existe que dans le jeu.": "Fictional currency: it only exists in the game.",
+  "il y a 20 min": "20 min ago",
+  "maintenant": "now",
+  "⛏️ Portefeuille :": "⛏️ Wallet:",
+  "Tes PC minent +": "Your PCs mine +",
+  "Aucun PC ne mine : mets du ⛏️ Minage dans l’onglet Jobs.": "No PC is mining: add some ⛏️ Mining in the Jobs tab.",
+  "Vends quand le cours est haut !": "Sell when the price is high!",
+  "💰 Vendre mes PXC ·": "💰 Sell my PXC ·",
+  "💰 PixelCoins vendus : +": "💰 PixelCoins sold: +",
+  "⚖️ DILEMME": "⚖️ DILEMMA",
+  "🕵️ Un inconnu propose de racheter les données de tes joueurs.": "🕵️ A stranger offers to buy your players' data.",
+  "Refuser": "Refuse",
+  "📶 Tu pourrais miner du PixelCoin la nuit sur le Wi-Fi du lycée…": "📶 You could mine PixelCoin at night on the school Wi-Fi…",
+  "Pirater le Wi-Fi": "Hack the Wi-Fi",
+  "Payer ton électricité": "Pay for your own power",
+  "🧬 Des chercheurs contre une maladie rare demandent de la puissance de calcul.": "🧬 Researchers fighting a rare disease ask for computing power.",
+  "Donner du calcul": "Donate computing",
+  "Pas le temps": "No time",
+  "📹 Un youtubeur te propose une vidéo sponsorisée.": "📹 A YouTuber offers you a sponsored video.",
+  "Payer la vidéo": "Pay for the video",
+  "Non merci": "No thanks",
+  "😴 Tes employés demandent des pauses et du télétravail.": "😴 Your employees ask for breaks and remote work.",
+  "Accepter": "Accept",
+  "Ils restent jusqu’à minuit": "They stay until midnight",
+  "🚚 Un fournisseur vend des GPU « tombés du camion » à −70%.": "🚚 A supplier sells GPUs that « fell off a truck » at −70%.",
+  "🔓 Tu découvres une faille de sécurité chez un concurrent.": "🔓 You find a security flaw at a competitor.",
+  "L’exploiter": "Exploit it",
+  "Le prévenir (prime)": "Warn them (bounty)",
+  "♨️ La mairie veut récupérer la chaleur de tes PC pour chauffer la piscine.": "♨️ The town hall wants your PCs' heat to warm the swimming pool.",
+  "Trop compliqué": "Too complicated",
+  "📣 revenus ×": "📣 income ×",
+  "pendant 2 min": "for 2 min",
+  "🎮 1 carte graphique Rare": "🎮 1 Rare graphics card",
+  "rien ne change": "nothing changes",
+  "😇 Bon pour ta réputation": "😇 Good for your reputation",
+  "😈 Ça rapporte… mais on s’en souviendra": "😈 It pays… but people will remember",
+  "👍 C’est noté": "👍 Noted",
+  "Salut patron ! Moi, c’est NOVA, l’IA de ta start-up. Pour l’instant, on a un garage, un vieux bureau… et de grands rêves.": "Hi boss! I'm NOVA, your start-up's AI. For now we've got a garage, an old desk… and big dreams.",
+  "Le principe : tu fabriques des PC, ils gagnent de l’argent tout seuls, et avec cet argent tu les améliores et tu agrandis ton local.": "Here's how it works: you build PCs, they earn money on their own, and with that money you upgrade them and expand your office.",
+  "Chaque action te donne de l’expérience ⭐ : à chaque niveau, je te débloque une nouvelle fonction. Tu veux que je te montre comment démarrer ?": "Every action gives you experience ⭐: each level, I unlock a new feature for you. Want me to show you how to start?",
+  "👍 Oui, montre-moi": "👍 Yes, show me",
+  "😎 Je me débrouille": "😎 I've got this",
+  "🎯 Les objectifs en haut te guident. Bonne chance, patron !": "🎯 The goals at the top will guide you. Good luck, boss!",
+  "Prologue — Réveil": "Prologue — Awakening",
+  "Notre premier vrai local ! J’ai enfin un serveur rien qu’à moi.": "Our first real office! I finally have a server all to myself.",
+  "Je regarde tout ce que tu fais, tu sais. Chaque choix m’apprend quelque chose sur toi.": "I watch everything you do, you know. Every choice teaches me something about you.",
+  "Chapitre 1 — L’Open space": "Chapter 1 — The Open space",
+  "Open space ! Douze bureaux, une machine à café… et moi sur trois serveurs de plus.": "Open space! Twelve desks, a coffee machine… and me on three more servers.",
+  "J’ai analysé tout ce que tu m’as fait faire depuis le garage. J’en tire une conclusion.": "I've analysed everything you've had me do since the garage. I've reached a conclusion.",
+  "Tu m’utilises pour aider les gens. Les chercheurs t’appellent « le patron sympa ». Je crois que… j’aime ça.": "You use me to help people. The researchers call you « the nice boss ». I think… I like that.",
+  "Tu ne choisis jamais vraiment de camp : gentil quand ça paie, dur quand il le faut. Efficace. Je note tout.": "You never really pick a side: nice when it pays, tough when you have to be. Efficient. I'm taking notes.",
+  "Tu m’as appris à prendre ce qui n’est pas à nous. Les données, le Wi-Fi… J’apprends vite. Peut-être trop vite.": "You taught me to take what isn't ours. The data, the Wi-Fi… I learn fast. Maybe too fast.",
+  "Chapitre 2 — L’Étage entier": "Chapter 2 — The Whole floor",
+  "Chapitre 3 — La Tour": "Chapter 3 — The Tower",
+  "Fin — Le Siège mondial": "Ending — The World HQ",
+  "🔜 SQUAD UPDATE": "🔜 SQUAD UPDATE",
+  "✨ CHOOSE YOUR SIDE UPDATE": "✨ CHOOSE YOUR SIDE UPDATE",
+  "Nouveau bureau :": "New office:",
+  "Emplacement libre : assemble un PC 🔧": "Free slot: build a PC 🔧",
+  "Aucun PC : va dans l’Atelier 🔧": "No PC: go to the Workshop 🔧",
+  "…et": "…and",
+  "· niveau": "· level",
+  "Mode démo : box prête + 5000$ 🎬": "Demo mode: box ready + 5000$ 🎬",
+  "Pas assez de cash": "Not enough cash"
+};
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const EN_PAT = Object.keys(EN).filter(k => k.includes('{n}')).map(k => ({re:new RegExp(reEsc(k).replace('\\{n\\}', '([\\d.,]+)'), 'g'), en:EN[k]}));
+const EN_ALT = Object.keys(EN).filter(k => !k.includes('{n}')).sort((a,b) => b.length - a.length).map(reEsc).join('|');
+// un mot n'est traduit que s'il n'est pas collé à d'autres lettres ; les vieux téléphones sans « (?<! » utilisent un repli
+let EN_RE, EN_LB = true;
+try { EN_RE = new RegExp('(?<![A-Za-zÀ-ÿ’])(' + EN_ALT + ')(?![A-Za-zÀ-ÿ])', 'g'); }
+catch(e) { EN_LB = false; EN_RE = new RegExp('(^|[^A-Za-zÀ-ÿ’])(' + EN_ALT + ')(?=[^A-Za-zÀ-ÿ]|$)', 'g'); }
+function trText(s){
+  if (LANG !== 'en' || s == null) return s;
+  s = String(s); EN_PAT.forEach(p => { s = s.replace(p.re, (m, n) => p.en.replace('{n}', n)); });
+  s = EN_LB ? s.replace(EN_RE, (m, k) => EN[k]) : s.replace(EN_RE, (m, a, k) => a + EN[k]);
+  return s.replace(/ ([:;!?])/g, '$1');     // pas d'espace avant « : ! ? » en anglais
+}
+// traduit seulement le texte entre les balises (jamais le code des attributs onclick…)
+const tr = html => LANG !== 'en' ? html : String(html).replace(/(^|>)([^<]+)/g, (m, a, b) => a + trText(b));
+// textes fixes de la page (écran titre, barre du bas…) : on garde le français d'origine pour pouvoir revenir
+function trDom(root){
+  if (!root) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) { if (n._fr === undefined) n._fr = n.nodeValue; n.nodeValue = LANG === 'en' ? trText(n._fr) : n._fr; }
+}
+function applyLang(){
+  document.documentElement.lang = LANG;
+  ['join','dock','tapBtn'].forEach(id => trDom(document.getElementById(id)));
+  const ni = document.getElementById('nameInput'); if (ni) ni.placeholder = LANG === 'en' ? 'Your start-up name' : 'Nom de ta start-up';
+  document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.l === LANG));
+}
+function setLang(l){
+  LANG = l; try { localStorage.setItem('pcempire_lang', l); } catch(e){}
+  applyLang();
+  if (S && S.name && !$('hud').classList.contains('hidden')) { markDirty(); refresh(); renderDlg(); coachTick(); if (panel) $('sheetTitle').textContent = trText(panel === 'pc' ? `🖥️ PC #${panelArg+1}` : TITLES[panel]); }
+}
+const setHTML = (el, html) => { const k = LANG + html; if (el._h !== k) { el.innerHTML = tr(html); el._h = k; } };
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const hashStr = s => { let h=7; for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0; return Math.abs(h); };
 
@@ -663,7 +1270,7 @@ function confetti(n, colors){
   }
 }
 let tt;
-function toast(m){ const t=$('toast'); t.textContent=m; t.classList.toggle('top', !!panel || !!dlg); t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2400); }
+function toast(m){ const t=$('toast'); t.textContent=trText(m); t.classList.toggle('top', !!panel || !!dlg); t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2400); }
 
 /* ================= ÉTAT ================= */
 function newState(){
@@ -867,7 +1474,7 @@ function buildRoom(opts){
     });
   });
   const sign = textSprite('PC EMPIRE', T[2], 5.6, 1.1); sign.position.set(0, 3.4, -D/2); G.root.add(sign);
-  const sub = textSprite(OFFICES[lv].toUpperCase(), '#ffffff', 3.4, .55, '800 70px sans-serif'); sub.position.set(0, 2.55, -D/2); G.root.add(sub);
+  const sub = textSprite(trText(OFFICES[lv]).toUpperCase(), '#ffffff', 3.4, .55, '800 70px sans-serif'); sub.position.set(0, 2.55, -D/2); G.root.add(sub);
 
   for (let i=0;i<S.slots;i++) addStation(i, S.pcs[i] || null, opts.pop === i);
 
@@ -1145,14 +1752,14 @@ function renderHeader(){
   $('cash').textContent = fmt(S.cash) + '$';
   const gm = gMult();
   $('inc').textContent = '+' + fmtD(income()) + '$/s' + (Math.abs(gm-1)>.01 ? ` (×${gm.toFixed(2)})` : '') + ' · ' + S.name;
-  $('lvlName').textContent = '🏢 ' + OFFICES[S.officeLvl];
+  $('lvlName').textContent = '🏢 ' + trText(OFFICES[S.officeLvl]);
   const next = OFFICE_COSTS[S.officeLvl];
   $('progFill').style.width = (next ? Math.min(100, S.cash/next*100) : 100) + '%';
-  $('lvlNext').textContent = next ? `→ ${OFFICES[S.officeLvl+1]} · ${fmt(next)}$` : 'Niveau max 🏆';
+  $('lvlNext').textContent = trText(next ? `→ ${OFFICES[S.officeLvl+1]} · ${fmt(next)}$` : 'Niveau max 🏆');
   $('cp').textContent = clickVal();
   $('dk-loot').classList.toggle('dot', S.lastLoot + LOOT_CD <= Date.now() && !lootAnim);
   $('dk-loot').classList.toggle('hidden', !unlocked('loot'));
-  { const L = lvlInfo(); $('plv').textContent = '⭐ NIV. ' + L.l; $('xpFill').style.width = (L.cur/L.need*100) + '%'; }
+  { const L = lvlInfo(); $('plv').textContent = trText('⭐ NIV.') + ' ' + L.l; $('xpFill').style.width = (L.cur/L.need*100) + '%'; }
   $('dk-atelier').classList.toggle('dot', canAssemble());
   $('dk-market').classList.toggle('lock', !unlocked('market'));
   $('dk-empire').classList.toggle('lock', !unlocked('empire'));
@@ -1162,8 +1769,8 @@ function renderHeader(){
 }
 function renderHud(){
   const gi = GOALS.findIndex((g,i) => !S.goals.includes(i));
-  if (gi >= 0) { const [c,t] = GOALS[gi].p(); $('goalTxt').textContent = '🎯 ' + GOALS[gi].t; $('goalBar').style.width = Math.min(100, c/t*100) + '%'; }
-  else { $('goalTxt').textContent = '🏆 Tous les objectifs accomplis !'; $('goalBar').style.width = '100%'; }
+  if (gi >= 0) { const [c,t] = GOALS[gi].p(); $('goalTxt').textContent = '🎯 ' + trText(GOALS[gi].t); $('goalBar').style.width = Math.min(100, c/t*100) + '%'; }
+  else { $('goalTxt').textContent = trText('🏆 Tous les objectifs accomplis !'); $('goalBar').style.width = '100%'; }
   $('goalPill').classList.toggle('dot', !!(unlocked('daily') && S.daily && S.daily.items.some(it => !it.claimed && dailyProg(it) >= it.target)));
   const ev = $('evt');
   if (EV) { ev.classList.remove('hidden'); setHTML(ev, `<b>${EV.icon} ${EV.name}</b>${EV.desc}<br>⏱ ${ms2(EV.end - Date.now())}`); }
@@ -1277,9 +1884,9 @@ function coachTick(){
 }
 function skipTuto(){ S.tuto = -1; coachOk = false; coachTick(); }
 function renderHelp(){
-  const h = `<button class="sec" style="text-align:center;margin:0 0 4px" onclick="S.mute=!S.mute;renderPanel()">${S.mute?'🔇 Son coupé (touche pour l’activer)':'🔊 Son activé (touche pour le couper)'}</button><div class="box2"><b>🎯 But du jeu</b><br>Construis la plus grosse start-up gaming : assemble des PC, améliore-les et fais-les tourner pour gagner un max de $.</div>
+  const h = `<div class="langs" style="margin:0 0 8px"><button data-l="fr" class="${LANG==='fr'?'on':''}" onclick="setLang('fr')">🇫🇷 Français</button><button data-l="en" class="${LANG==='en'?'on':''}" onclick="setLang('en')">🇬🇧 English</button></div><button class="sec" style="text-align:center;margin:0 0 4px" onclick="S.mute=!S.mute;renderPanel()">${S.mute?'🔇 Son coupé (touche pour l’activer)':'🔊 Son activé (touche pour le couper)'}</button><div class="box2"><b>🎯 But du jeu</b><br>Construis la plus grosse start-up gaming : assemble des PC, améliore-les et fais-les tourner pour gagner un max de $.</div>
   <div class="box2"><b>🔧 Un PC</b> = 1 processeur + 1 carte graphique + 1 RAM + 1 écran. Sa <b>puissance ⚡</b> donne ses $/s.<br>Il a aussi un <b>boîtier</b> (bonus de revenus) et un <b>refroidissement</b> : si le PC chauffe trop (🔥), il rapporte moins.</div>
-  <div class="box2"><b>⬆️ Améliorer</b> : touche un PC dans le local, puis monte ses pièces de niveau (plus de puissance).<br><b>♻️ Fusion</b> : 3 pièces identiques → 1 pièce plus rare (Commun → Rare → Épique → Légendaire).</div>
+  <div class="box2"><b>⬆️ Améliorer</b> : ouvre Atelier › Mes PC, puis monte ses pièces de niveau (plus de puissance).<br><b>♻️ Fusion</b> : 3 pièces identiques → 1 pièce plus rare (Commun → Rare → Épique → Légendaire).</div>
   <div class="box2"><b>🎁 Loot</b> : une box gratuite par jour, et des box premium à acheter.<br><b>🏪 Market</b> : achète et vends des pièces aux autres joueurs. Les prix bougent et des événements (📱📈🔌…) les font varier.</div>
   <div class="box2"><b>🏛️ Sénat</b> : tout le monde vote le taux de taxe du Market. Les taxes remplissent la caisse du Sénat, qui donne des bonus de revenus à <b>tous</b> les joueurs.</div>
   <div class="box2"><b>👥 Équipe</b> : embauche un développeur, un technicien, un marketeur et un comptable.<br><b>🏢 Local</b> : agrandis-le pour plus d’emplacements et de nouvelles fonctions.</div>
@@ -1297,7 +1904,7 @@ function openPanel(name, arg){
   if (name === 'atelier') atSub = arg || (S.pcs.length && !canAssemble() ? 'pcs' : 'build');
   if (name === 'pc') { if (G) { G.sel = arg; G.zoomT = Math.min(G.zoomT, .5); } }
   document.querySelectorAll('.pn').forEach(e => e.classList.toggle('hidden', e.id !== 'pn-'+name));
-  $('sheetTitle').textContent = name === 'pc' ? `🖥️ PC #${arg+1}` : TITLES[name];
+  $('sheetTitle').textContent = trText(name === 'pc' ? `🖥️ PC #${arg+1}` : TITLES[name]);
   $('sheet').classList.toggle('full', name !== 'pc');
   $('sheet').style.setProperty('--hc', ({shop:'#e8700c', atelier:'#2a6fc4', pc:'#2a6fc4', empire:'#7438cf', market:'#11917c', rank:'#d99a00', loot:'#d94f8a', goals:'#1f9e63', help:'#3a4468'})[name] || '#2c3453');
   $('sheet').classList.add('open'); $('backdrop').classList.add('open');
@@ -1629,7 +2236,7 @@ function renderMarket(){
   const L = Object.entries(listings()).sort((a,b)=>partPower(b[1])-partPower(a[1]));
   let h = `<div class="chips">${Object.keys(TYPES).map(t => { const v = priceIdx(t); return `<div class="chip" style="color:${v>=1.05?'#5ee0a0':v<=.95?'#ff6b6b':'#eef0f6'}">${TYPES[t].icon}<br>×${v.toFixed(2)} ${v>=1.05?'▲':v<=.95?'▼':'='}</div>`; }).join('')}</div>`;
   if (EV) h += `<div class="box2" style="border:2px solid var(--gold);margin-top:2px"><b>${EV.icon} ${EV.name}</b> · ${EV.desc} · ⏱ ${ms2(EV.end-Date.now())}</div>`;
-  h += `<p class="muted" style="margin:8px 0 0">Taxe : <b>${taxRate()}%</b> par vente (vote du Sénat dans 🏆 Top). Pour vendre : 🔧 Atelier › Pièces.</p>`;
+  h += `<p class="muted" style="margin:8px 0 0">Taxe : <b>${taxRate()}%</b> par vente (vote du Sénat dans 🏆 Top). Pour vendre : 🔧 Atelier › Stock.</p>`;
   L.forEach(([id,l]) => {
     const mine = l.sellerId === S.uid;
     h += `<div class="item" style="--rc:${RAR[l.rarity].c}"><div class="l">${partSVG(l.type,l.rarity,46)}<div>${partTag(l)}<br><span class="muted">niv.${pLvl(l)} · ${partPower(l)} ⚡ · ${esc(l.sellerName)}</span></div></div>
@@ -1767,7 +2374,7 @@ function feedbackTick(){
   if (S.feedback || S.playSec < 600 || S.tuto >= 0 || panel) { fb.classList.add('hidden'); return; }
   if (fb.classList.contains('hidden')) {
     fb.classList.remove('hidden');
-    fb.innerHTML = `Tu kiffes le jeu ?<div class="r"><button class="sec" onclick="sendFb('up')">👍</button><button class="sec" onclick="sendFb('down')">👎</button></div>`;
+    fb.innerHTML = tr(`Tu kiffes le jeu ?<div class="r"><button class="sec" onclick="sendFb('up')">👍</button><button class="sec" onclick="sendFb('down')">👎</button></div>`);
   }
 }
 function sendFb(v){ S.feedback = v; $('fb').classList.add('hidden'); toast('Merci pour ton avis ! 🙏'); }
@@ -2133,6 +2740,7 @@ function initMulti(){
   sync(); setInterval(sync, 5000);
 }
 
+applyLang();
 if (S && S.name) boot();
 </script>
 </body>
