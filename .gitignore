@@ -1,0 +1,19 @@
+# dépendances (réinstallées par npm install)
+node_modules/
+# captures et rapport régénérés à chaque « npm run test:telephones »
+tests/captures/
+# archives envoyées par message (le contenu est déjà versionné)
+*.zip
+
+# ---- dépôt PUBLIC (GitHub Pages) : rien de personnel ni de scolaire ----
+# documents du devoir et captures
+*.docx
+*.jpg
+*.png
+# notes de travail internes (audits, plan, consignes pour Claude)
+AUDIT*.md
+PLAN-*.md
+CLAUDE.md
+.claude/
+# anciennes versions sauvegardées en local
+pc-empire-v*.html

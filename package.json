@@ -1,0 +1,11 @@
+{
+  "name": "pc-empire",
+  "private": true,
+  "description": "PC EMPIRE — jeu mobile (un seul fichier HTML) + banc de test téléphones",
+  "scripts": {
+    "test:telephones": "node tests/telephones.js"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}
