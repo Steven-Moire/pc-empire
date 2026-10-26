@@ -292,6 +292,9 @@
   #coach{top:calc(166px + env(safe-area-inset-top))}
   /* page ouverte : les messages passent en bas pour ne pas cacher le titre */
   #toast.top{top:auto;bottom:calc(18px + env(safe-area-inset-bottom))}
+  #langBtn{top:calc(270px + env(safe-area-inset-top))}
+  #langBtn.up{top:calc(216px + env(safe-area-inset-top))}
+  #langBtn span{position:absolute;right:-7px;bottom:-5px;padding:1px 5px;border-radius:7px;border:2px solid #0b0e15;background:#ffd23f;color:#3a2400;font:12px 'Lilita One','Nunito',sans-serif}
   .langs{display:flex;gap:8px;margin-top:12px;width:min(380px,100%)}
   .langs button{flex:1;margin:0;text-align:center;background:#1f2433;color:#eef0f6;border:2px solid #3a4468;border-bottom-width:4px}
   .langs button.on{background:#ffd23f;color:#3a2400;border-color:#0b0e15}
@@ -334,6 +337,7 @@
   <button class="rbtn" id="viewBtn" onclick="resetView()" aria-label="Recentrer la vue">🎯</button>
   <button class="rbtn" id="helpBtn" onclick="openPanel('help')" aria-label="Aide">❓</button>
   <button class="rbtn" id="dk-loot" onclick="openPanel('loot')" aria-label="Box du jour">🎁</button>
+  <button class="rbtn" id="langBtn" onclick="setLang(LANG==='fr'?'en':'fr')" aria-label="Langue / Language">🌐<span id="langTag">FR</span></button>
   <div id="evt" class="hidden"></div>
 
   <button id="tapBtn" onpointerdown="clickDev(event)"><span class="e">💻</span><b>CODER</b><small>+<span id="cp">1</span>$ / tap</small></button>
@@ -1058,6 +1062,7 @@ const EN = {
   "Emplacement libre : assemble un PC 🔧": "Free slot: build a PC 🔧",
   "Aucun PC : va dans l’Atelier 🔧": "No PC: go to the Workshop 🔧",
   "…et": "…and",
+  "objectif(s) arriveront avec les prochains niveaux ⭐": "goal(s) will unlock with the next levels ⭐",
   "· niveau": "· level",
   "Mode démo : box prête + 5000$ 🎬": "Demo mode: box ready + 5000$ 🎬",
   "Pas assez de cash": "Not enough cash"
@@ -1088,6 +1093,7 @@ function applyLang(){
   ['join','dock','tapBtn'].forEach(id => trDom(document.getElementById(id)));
   const ni = document.getElementById('nameInput'); if (ni) ni.placeholder = LANG === 'en' ? 'Your start-up name' : 'Nom de ta start-up';
   document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.l === LANG));
+  const lt = document.getElementById('langTag'); if (lt) lt.textContent = LANG.toUpperCase();
 }
 function setLang(l){
   LANG = l; try { localStorage.setItem('pcempire_lang', l); } catch(e){}
@@ -1759,6 +1765,7 @@ function renderHeader(){
   $('cp').textContent = clickVal();
   $('dk-loot').classList.toggle('dot', S.lastLoot + LOOT_CD <= Date.now() && !lootAnim);
   $('dk-loot').classList.toggle('hidden', !unlocked('loot'));
+  $('langBtn').classList.toggle('up', !unlocked('loot'));
   { const L = lvlInfo(); $('plv').textContent = trText('⭐ NIV.') + ' ' + L.l; $('xpFill').style.width = (L.cur/L.need*100) + '%'; }
   $('dk-atelier').classList.toggle('dot', canAssemble());
   $('dk-market').classList.toggle('lock', !unlocked('market'));
@@ -1768,7 +1775,7 @@ function renderHeader(){
   $('cp').textContent = clickVal() + (S.rush > 0 ? ` · ⚡${Math.ceil(S.rush)}s` : '');
 }
 function renderHud(){
-  const gi = GOALS.findIndex((g,i) => !S.goals.includes(i));
+  const gi = GOALS.findIndex((g,i) => !S.goals.includes(i) && goalOpen(g));
   if (gi >= 0) { const [c,t] = GOALS[gi].p(); $('goalTxt').textContent = '🎯 ' + trText(GOALS[gi].t); $('goalBar').style.width = Math.min(100, c/t*100) + '%'; }
   else { $('goalTxt').textContent = trText('🏆 Tous les objectifs accomplis !'); $('goalBar').style.width = '100%'; }
   $('goalPill').classList.toggle('dot', !!(unlocked('daily') && S.daily && S.daily.items.some(it => !it.claimed && dailyProg(it) >= it.target)));
@@ -1782,16 +1789,16 @@ const maxRarityPc = () => S.pcs.reduce((m,pc) => Math.max(m, ...pc.parts.map(p=>
 const hasLegend = () => S.inv.some(p=>p.rarity===3) || S.pcs.some(pc=>pc.parts.some(p=>p.rarity===3));
 const GOALS = [
   {t:'Assemble ton premier PC',               r:80,    p:()=>[S.stats.assembled,1], w:'Un PC gagne de l’argent tout seul, même quand tu ne tapes pas.'},
-  {t:'Ouvre ta première box',                 r:80,    p:()=>[S.stats.boxes,1], w:'Des pièces gratuites, et parfois des rares (niveau 3).'},
-  {t:'Améliore une pièce',                    r:100,   p:()=>[S.stats.upgraded,1], w:'Plus de puissance = plus d’argent, sans prendre de place. Atelier › Mes PC.'},
+  {t:'Ouvre ta première box',                 r:80,    f:'loot', p:()=>[S.stats.boxes,1], w:'Des pièces gratuites, et parfois des rares (niveau 3).'},
+  {t:'Améliore une pièce',                    r:100,   f:'upgrade', p:()=>[S.stats.upgraded,1], w:'Plus de puissance = plus d’argent, sans prendre de place. Atelier › Mes PC.'},
   {t:'Fais tourner 2 PC en même temps',       r:150,   p:()=>[S.pcs.length,2], w:'Deux PC, c’est deux fois plus d’argent par seconde.'},
   {t:'Atteins 10$/s',                         r:250,   p:()=>[income(),10]},
   {t:'Passe au bureau « Local »',             r:300,   p:()=>[S.officeLvl,1], w:'Plus de place pour tes PC, et des pièces de gamme Rare.'},
-  {t:'Vends une pièce sur le Market',         r:200,   p:()=>[S.stats.sold,1]},
-  {t:'Fais ta première fusion',               r:300,   p:()=>[S.stats.fused,1]},
-  {t:'Embauche ton premier employé',          r:400,   p:()=>[teamTotal(),1]},
-  {t:'Améliore le refroidissement d’un PC',   r:300,   p:()=>[S.stats.coolUpg,1]},
-  {t:'Vote au Sénat',                         r:200,   p:()=>[S.stats.voted,1]},
+  {t:'Vends une pièce sur le Market',         r:200,   f:'market', p:()=>[S.stats.sold,1]},
+  {t:'Fais ta première fusion',               r:300,   f:'fusion', p:()=>[S.stats.fused,1]},
+  {t:'Embauche ton premier employé',          r:400,   f:'team', p:()=>[teamTotal(),1]},
+  {t:'Améliore le refroidissement d’un PC',   r:300,   f:'upgrade', p:()=>[S.stats.coolUpg,1]},
+  {t:'Vote au Sénat',                         r:200,   f:'senat', p:()=>[S.stats.voted,1]},
   {t:'Monte un PC avec une pièce Épique',     r:800,   p:()=>[maxRarityPc()>=2?1:0,1]},
   {t:'Atteins 50$/s',                         r:1500,  p:()=>[income(),50]},
   {t:'Passe à l’Open space',                  r:2500,  p:()=>[S.officeLvl,2]},
@@ -1800,11 +1807,11 @@ const GOALS = [
   {t:'Atteins 1000$/s',                       r:30000, p:()=>[income(),1000]},
   {t:'Construis le Siège mondial',            r:100000,p:()=>[S.officeLvl,5]},
   // ajoutés à la fin pour garder les numéros des anciens objectifs dans les sauvegardes
-  {t:'Répartis ta puissance sur 2 jobs',      r:400,   p:()=>[Object.values(S.jobs).filter(n=>n>0).length,2]},
-  {t:'Prends une décision (dilemme)',         r:300,   p:()=>[S.stats.dil,1]},
-  {t:'Débloque un talent',                    r:500,   p:()=>[S.tree.length,1]},
-  {t:'Choisis ton camp : 😇 ou 😈',            r:3000,  p:()=>[side()!==0?1:0,1]},
-  {t:'Entre en Bourse (IPO)',                 r:5000,  p:()=>[S.ipo,1]}
+  {t:'Répartis ta puissance sur 2 jobs',      r:400,   f:'empire', p:()=>[Object.values(S.jobs).filter(n=>n>0).length,2]},
+  {t:'Prends une décision (dilemme)',         r:300,   f:'dilemma', p:()=>[S.stats.dil,1]},
+  {t:'Débloque un talent',                    r:500,   f:'empire', p:()=>[S.tree.length,1]},
+  {t:'Choisis ton camp : 😇 ou 😈',            r:3000,  f:'empire', p:()=>[side()!==0?1:0,1]},
+  {t:'Entre en Bourse (IPO)',                 r:5000,  f:'ipo', p:()=>[S.ipo,1]}
 ];
 function checkGoals(){
   GOALS.forEach((g,i) => {
@@ -1818,18 +1825,22 @@ function checkGoals(){
 }
 const MPOOL = [
   {k:'taps',      n:[150,300], t:'Tape {n} fois sur CODER', u:0},
-  {k:'upgraded',  n:[2,4],     t:'Améliore {n} pièces',      u:0},
+  {k:'upgraded',  n:[2,4],     t:'Améliore {n} pièces',      f:'upgrade'},
   {k:'assembled', n:[1,1],     t:'Assemble un PC',           u:0},
-  {k:'boxes',     n:[1,1],     t:'Ouvre une box',            u:0},
+  {k:'boxes',     n:[1,1],     t:'Ouvre une box',            f:'loot'},
   {k:'shopBought',n:[3,6],     t:'Achète {n} pièces à la boutique', u:0},
-  {k:'sold',      n:[1,3],     t:'Vends {n} pièce(s) sur le Market', u:1},
-  {k:'bought',    n:[1,2],     t:'Achète {n} pièce(s) au Market',    u:1},
-  {k:'fused',     n:[1,1],     t:'Fais une fusion',          u:1}
+  {k:'sold',      n:[1,3],     t:'Vends {n} pièce(s) sur le Market', f:'market'},
+  {k:'bought',    n:[1,2],     t:'Achète {n} pièce(s) au Market',    f:'market'},
+  {k:'fused',     n:[1,1],     t:'Fais une fusion',          f:'fusion'}
 ];
+// une quête liée à une fonction encore verrouillée n'est pas proposée (avant : « Ouvre ta première box » au niveau 1)
+const goalOpen = g => !g.f || unlocked(g.f);
+const MKEY_F = {upgraded:'upgrade', boxes:'loot', sold:'market', bought:'market', fused:'fusion'};
 function ensureDaily(){
   const td = todayStr();
-  if (S.daily && S.daily.date === td) return;
-  const r = mulberry(hashStr(td)), pool = MPOOL.filter(m => m.u <= S.officeLvl), items = [];
+  // missions d'aujourd'hui gardées, sauf si l'une demande une fonction pas encore débloquée (anciennes sauvegardes)
+  if (S.daily && S.daily.date === td && !S.daily.items.some(it => !it.claimed && MKEY_F[it.k] && !unlocked(MKEY_F[it.k]))) return;
+  const r = mulberry(hashStr(td)), pool = MPOOL.filter(m => goalOpen(m)), items = [];
   while (items.length < 3 && pool.length) {
     const m = pool.splice(Math.floor(r()*pool.length), 1)[0];
     const n = m.n[0] + Math.floor(r()*(m.n[1]-m.n[0]+1));
@@ -1851,10 +1862,11 @@ function renderGoals(){
       ${it.claimed ? '<span>✅</span>' : `<button class="sm ${ok?'gold':'sec'}" ${ok?'':'disabled'} onclick="claimDaily(${i})">+${fmt(it.reward)}$</button>`}</div>`;
   });
   h += `<h2 class="s" style="margin-top:16px">Objectifs <span class="muted">(${S.goals.length}/${GOALS.length})</span></h2>`;
-  const next = GOALS.map((g,i)=>i).filter(i=>!S.goals.includes(i));
+  const todo = GOALS.map((g,i)=>i).filter(i=>!S.goals.includes(i)), next = todo.filter(i => goalOpen(GOALS[i])), locked = todo.length - next.length;
   next.slice(0,4).forEach((i,k) => { const g = GOALS[i], [c,t] = g.p();
     h += `<div class="goal" style="${k===0?'outline:2px solid var(--gold)':''}"><div class="mid"><b>${esc(g.t)}</b>${g.w?`<br><span class="muted">${esc(g.w)}</span>`:''}<div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,c/t*100)}%"></i></div></div><span class="rw">+${fmt(g.r)}$</span></div>`; });
   if (next.length > 4) h += `<p class="muted center">…et ${next.length-4} autres objectifs à découvrir</p>`;
+  if (locked) h += `<p class="muted center">🔒 ${locked} objectif(s) arriveront avec les prochains niveaux ⭐</p>`;
   S.goals.slice(-3).forEach(i => { h += `<div class="goal done"><div class="mid"><b>✅ ${esc(GOALS[i].t)}</b></div></div>`; });
   setHTML($('pn-goals'), h);
 }
@@ -1884,7 +1896,7 @@ function coachTick(){
 }
 function skipTuto(){ S.tuto = -1; coachOk = false; coachTick(); }
 function renderHelp(){
-  const h = `<div class="langs" style="margin:0 0 8px"><button data-l="fr" class="${LANG==='fr'?'on':''}" onclick="setLang('fr')">🇫🇷 Français</button><button data-l="en" class="${LANG==='en'?'on':''}" onclick="setLang('en')">🇬🇧 English</button></div><button class="sec" style="text-align:center;margin:0 0 4px" onclick="S.mute=!S.mute;renderPanel()">${S.mute?'🔇 Son coupé (touche pour l’activer)':'🔊 Son activé (touche pour le couper)'}</button><div class="box2"><b>🎯 But du jeu</b><br>Construis la plus grosse start-up gaming : assemble des PC, améliore-les et fais-les tourner pour gagner un max de $.</div>
+  const h = `<button class="sec" style="text-align:center;margin:0 0 4px" onclick="S.mute=!S.mute;renderPanel()">${S.mute?'🔇 Son coupé (touche pour l’activer)':'🔊 Son activé (touche pour le couper)'}</button><div class="box2"><b>🎯 But du jeu</b><br>Construis la plus grosse start-up gaming : assemble des PC, améliore-les et fais-les tourner pour gagner un max de $.</div>
   <div class="box2"><b>🔧 Un PC</b> = 1 processeur + 1 carte graphique + 1 RAM + 1 écran. Sa <b>puissance ⚡</b> donne ses $/s.<br>Il a aussi un <b>boîtier</b> (bonus de revenus) et un <b>refroidissement</b> : si le PC chauffe trop (🔥), il rapporte moins.</div>
   <div class="box2"><b>⬆️ Améliorer</b> : ouvre Atelier › Mes PC, puis monte ses pièces de niveau (plus de puissance).<br><b>♻️ Fusion</b> : 3 pièces identiques → 1 pièce plus rare (Commun → Rare → Épique → Légendaire).</div>
   <div class="box2"><b>🎁 Loot</b> : une box gratuite par jour, et des box premium à acheter.<br><b>🏪 Market</b> : achète et vends des pièces aux autres joueurs. Les prix bougent et des événements (📱📈🔌…) les font varier.</div>
